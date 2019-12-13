@@ -238,34 +238,52 @@ void matrix_scan_kb() {
 }
 
 void reset_adns7530() {
-    uint8_t snd1[] = {
-        WRITE_TO(0x3A), 0x5a, 0, 0, WRITE_TO(0x2E), 0, 0, 0,
-    };
     uint8_t rcv[256];
 
-    spim_start(snd1, 8, rcv, 8, CS_PIN_TB);
+    {
+        uint8_t snd[] = {
+            WRITE_TO(0x3A), 0x5a, 0, 0, WRITE_TO(0x2E), 0, 0, 0,
+        };
+        spim_start(snd, sizeof(snd), rcv, sizeof(snd), CS_PIN_TB);
+    }
 
-    uint8_t snd2[] = {
-        READ_FROM(0x2), 0, READ_FROM(0x3), 0, READ_FROM(0x4), 0, READ_FROM(0x5), 0,
-    };
-    spim_start(snd2, 8, rcv, 8, CS_PIN_TB);
+    {
+        uint8_t snd[] = {
+            READ_FROM(0x2), 0, READ_FROM(0x3), 0, READ_FROM(0x4), 0, READ_FROM(0x5), 0,
+        };
+        spim_start(snd, sizeof(snd), rcv, sizeof(snd), CS_PIN_TB);
+    }
 
-    uint8_t snd3[] = {
-        WRITE_TO(0x3C), 0x27, WRITE_TO(0x22), 0x0A, WRITE_TO(0x21), 0x01, WRITE_TO(0x3C), 0x32, WRITE_TO(0x23), 0x20, WRITE_TO(0x3C), 0x05,
-    };
-    spim_start(snd3, 12, rcv, 12, CS_PIN_TB);
+    {
+        uint8_t snd[] = {
+            WRITE_TO(0x3C), 0x27, WRITE_TO(0x22), 0x0A, WRITE_TO(0x21), 0x01, WRITE_TO(0x3C), 0x32, WRITE_TO(0x23), 0x20, WRITE_TO(0x3C), 0x05,
+        };
+        spim_start(snd, sizeof(snd), rcv, sizeof(snd), CS_PIN_TB);
+    }
 
-    // clang-format off
-    // set laser power
-    uint8_t snd4[] = {
-        WRITE_TO(0x1A), 0x40,
-        WRITE_TO(0x1F), (uint8_t)((~0x40) & 0xFF),
-        WRITE_TO(0x1C), 0xFF,
-        WRITE_TO(0x1D), 0,
-    };
-    // clang-format on
+    {
+        // clang-format off
+        // set laser power packet
+        uint8_t snd[] = {
+            WRITE_TO(0x1A), 0x40,
+            WRITE_TO(0x1F), (uint8_t)((~0x40) & 0xFF),
+            WRITE_TO(0x1C), 0xFF,
+            WRITE_TO(0x1D), 0,
+        };
+        // clang-format on
 
-    spim_start(snd4, 8, rcv, 8, CS_PIN_TB);
+        // get laser power config from CONFIG.JSN
+        uint8_t laser_power = BMPAPI->app.get_config()->reserved[0];
+        // set default value
+        if (laser_power == 0) {
+            laser_power = 0xFF;
+        }
+
+        snd[5] = laser_power;
+        snd[7] = ~laser_power;
+
+        spim_start(snd, sizeof(snd), rcv, sizeof(snd), CS_PIN_TB);
+    }
 }
 
 static void kugel_matrix_init() {}
