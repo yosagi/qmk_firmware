@@ -29,7 +29,7 @@ enum {
 };
 
 enum {
-    LEN_L,
+    LEN_L = 0,
     LEN_H,
     MSG_TYP,
     DEV_TYP,
@@ -43,15 +43,28 @@ enum {
 } packet_index;
 
 enum {
-    CONNECTED     = 0x01,
-    DISCONNECTED  = 0x02,
-    ERROR         = 0x03,
-    DEVICE_POLL   = 0x04,
-    DEVICE_STRING = 0x05,
-    DEVICE_INFO   = 0x06,
-    HID_INFO      = 0x07,
-    STARTUP       = 0x08,
+    CONNECTED = 1,
+    DISCONNECTED,
+    ERROR,
+    DEVICE_POLL,
+    DEVICE_STRING,
+    DEVICE_INFO,
+    HID_INFO,
+    STARTUP,
 } msg_type;
+
+enum {
+    NONE = 0,
+    POINTER,
+    MOUSE,
+    RESERVED,
+    JOYSTICK,
+    GAMEPAD,
+    KEYBOARD,
+    KEYPAD,
+    MULTI_AXIS,
+    SYSTEM,
+} dev_type;
 
 #define SERIAL_BUFFER_LEN 256
 
@@ -121,6 +134,10 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
             }
 
             switch (buf[MSG_TYP]) {
+                case CONNECTED:
+                    dprintf("Connected\n");
+                    break;
+
                 case DISCONNECTED:
                     dprintf("Disconnected\n");
                     for (uint8_t rowIdx = 0; rowIdx < MATRIX_ROWS; rowIdx++) {
@@ -134,7 +151,7 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
 
                 case DEVICE_POLL:
                     // dprintf("Report received\n");
-                    if (msg_len == 8 && buf[DEV_TYP] == 6) {
+                    if (msg_len == 8 && buf[DEV_TYP] == KEYBOARD) {
                         // accept only bootmode keyboard packet
 
                         // dprintf("%d %d %d %d %d %d %d %d\n", buf[REPORT_START], buf[REPORT_START + 1], buf[REPORT_START + 2], buf[REPORT_START + 3], buf[REPORT_START + 4], buf[REPORT_START + 5], buf[REPORT_START + 6], buf[REPORT_START + 7]);
