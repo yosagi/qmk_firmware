@@ -73,7 +73,12 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
         if (c == SLIP_END) {
             // dprintf("Detect END signal\n");
             if (overflow) {
-                overflow = false;
+                // reset receive buffer
+                overflow         = false;
+                receive_complete = false;
+                widx             = 0;
+                escaped          = false;
+                memset(buf, 0, sizeof(buf));
             } else {
                 receive_complete = true;
             }
