@@ -50,10 +50,20 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_CAPS,   KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, JP_SCLN, JP_COLN, JP_RBRC,                                                  KC_KP_4, KC_KP_5, KC_KP_6,
         KC_LSFT,    KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, JP_SLSH, JP_BSLS, KC_RSFT,                 KC_UP,                     KC_KP_1, KC_KP_2, KC_KP_3, KC_KP_ENTER,
         KC_LCTRL, KC_LGUI, KC_LALT, JP_MHEN, KC_SPC, KC_HENK, JP_KANA, KC_RALT, KC_RGUI, KC_APP, KC_RCTRL,            KC_LEFT,  KC_DOWN, KC_RIGHT,       KC_KP_0,          KC_KP_DOT
-    )
+    ),
 };
 // clang-format on
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     return true;
 }
+
+#ifdef OLED_DRIVER_ENABLE
+#    include "rev1.h"
+#    include "oled_driver.h"
+#endif
+
+#ifdef OLED_DRIVER_ENABLE
+void oled_task_user(void) { render_logo(); }
+#endif
+

@@ -18,6 +18,8 @@
 
 #include "quantum.h"
 
+bool process_packet(matrix_row_t current_matrix[]);
+
 /* This is a shortcut to help you visually see your layout.
  *
  * The first section contains all of the arguments representing the physical
