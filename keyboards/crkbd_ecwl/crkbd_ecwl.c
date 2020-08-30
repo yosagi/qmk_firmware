@@ -18,4 +18,5 @@
 
 void keyboard_post_init_kb() {
     debug_enable = true;
+    debug_matrix = true;
 }

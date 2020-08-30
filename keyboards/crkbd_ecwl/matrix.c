@@ -17,6 +17,9 @@
 #include "matrix.h"
 #include "analog.h"
 #include "quantum.h"
+#include "split_util.h"
+#include "transport.h"
+#include "debounce.h"
 
 #define POWER_PIN B4
 #define APLEX_EN_PIN E6
@@ -25,8 +28,8 @@
 #define ANALOG_PORT F6
 
 #define ERROR_TH 3000
-#define HIGH_TH 500
-#define LOW_TH 420
+#define HIGH_TH 300
+#define LOW_TH 200
 
 uint16_t sw_read[MATRIX_ROWS * MATRIX_COLS];
 
@@ -36,7 +39,26 @@ const uint8_t col_sels[] = {6, 4, 3, 0, 1, 2, 5};
 
 #define LEN(x) (sizeof(x) / sizeof(x[0]))
 
+
+#define ERROR_DISCONNECT_COUNT 5
+
+#define ROWS_PER_HAND (MATRIX_ROWS / 2)
+
+/* matrix state(1:on, 0:off) */
+extern matrix_row_t raw_matrix[MATRIX_ROWS];  // raw values
+extern matrix_row_t matrix[MATRIX_ROWS];      // debounced values
+
+// row offsets for each hand
+uint8_t thisHand, thatHand;
+
+// user-defined overridable functions
+__attribute__((weak)) void matrix_slave_scan_user(void) {}
+
+
 void matrix_init_custom(void) {
+
+    split_pre_init();
+
     // init row_pins
     for (int idx = 0; idx < LEN(row_pins); idx++) {
         setPinOutput(row_pins[idx]);
@@ -67,6 +89,11 @@ void matrix_init_custom(void) {
 
     // set analog reference
     analogReference(ADC_REF_POWER);
+
+    thisHand = isLeftHand ? 0 : (ROWS_PER_HAND);
+    thatHand = ROWS_PER_HAND - thisHand;
+
+    split_post_init();
 }
 
 static void clear_all_row_pins(void) {
@@ -74,6 +101,32 @@ static void clear_all_row_pins(void) {
         writePinLow(row_pins[row]);
     }
 }
+
+void matrix_post_scan(void) {
+    if (is_keyboard_master()) {
+        static uint8_t error_count;
+
+        if (!transport_master(matrix + thatHand)) {
+            error_count++;
+
+            if (error_count > ERROR_DISCONNECT_COUNT) {
+                // reset other half if disconnected
+                for (int i = 0; i < ROWS_PER_HAND; ++i) {
+                    matrix[thatHand + i] = 0;
+                }
+            }
+        } else {
+            error_count = 0;
+        }
+
+        matrix_scan_quantum();
+    } else {
+        transport_slave(matrix + thisHand);
+
+        matrix_slave_scan_user();
+    }
+}
+
 
 bool matrix_scan_custom(matrix_row_t current_matrix[]) {
     for (int col_sel_idx = 0; col_sel_idx < LEN(col_sels); col_sel_idx++) {
@@ -115,6 +168,9 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
         }
     }
 
+    // Discharge
+    setPinOutput(DISCHARGE_PIN);
+
     // select first col
     for (int col_pin_idx = 0; col_pin_idx < LEN(col_pins); col_pin_idx++) {
         writePin(col_pins[col_pin_idx], col_sels[0] & (1 << col_pin_idx) ? 1 : 0);
@@ -130,7 +186,7 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
             if (sw_read[col + row * LEN(col_sels)] > ERROR_TH) {
                 // error value
 
-                dprintf("ERROR(%d,%d):%d", row, col, sw_read[col + row * LEN(col_sels)]);
+                dprintf("ERROR(%d,%d):%d\n", row, col, sw_read[col + row * LEN(col_sels)]);
 
                 sw_read[col + row * LEN(col_sels)] = 0;
             }
@@ -140,17 +196,39 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
                     current_matrix[row] &= ~(1 << col);
                     matrix_changed++;
 
-                    dprintf("UP(%d,%d):%d", row, col, sw_read[col + row * LEN(col_sels)]);
+                    dprintf("UP(%d,%d):%d\n", row, col, sw_read[col + row * LEN(col_sels)]);
                 }
             } else {
                 if (sw_read[col + row * LEN(col_sels)] > HIGH_TH) {
                     current_matrix[row] |= (1 << col);
                     matrix_changed++;
-                    dprintf("DOWN(%d,%d):%d", row, col, sw_read[col + row * LEN(col_sels)]);
+                    dprintf("DOWN(%d,%d):%d\n", row, col, sw_read[col + row * LEN(col_sels)]);
                 }
             }
         }
     }
 
+    static int cnt = 0;
+    if (cnt++ == 300) {
+        cnt = 0;
+        for (int row = 0; row < sizeof(row_pins); row++) {
+            for (int col_sel_idx = 0; col_sel_idx < LEN(col_sels);
+                 col_sel_idx++) {
+                dprintf("%5d", sw_read[col_sel_idx + row * LEN(col_sels)]);
+            }
+            dprintf("\n");
+        }
+        dprintf("\n");
+    }
+
     return (matrix_changed > 0);
+}
+
+uint8_t matrix_scan(void) {
+    bool changed = matrix_scan_custom(raw_matrix);
+
+    debounce(raw_matrix, matrix + thisHand, ROWS_PER_HAND, changed);
+
+    matrix_post_scan();
+    return changed;
 }
