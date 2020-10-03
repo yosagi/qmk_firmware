@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "meEC.h"
+#include "meec.h"
 
 #include "ECmicro.h"
 #include "matrix.h"
