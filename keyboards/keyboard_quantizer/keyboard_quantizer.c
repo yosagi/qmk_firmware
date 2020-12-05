@@ -21,6 +21,10 @@
 #include "quantum.h"
 #include "debug.h"
 
+bool ch559UpdateMode = false;
+
+__attribute__((weak)) void keyboard_post_init_kb_rev(void) {}
+
 void keyboard_post_init_kb() {
     // debug_enable   = true;
     // debug_keyboard = true;
@@ -149,6 +153,10 @@ bool process_packet(matrix_row_t current_matrix[]) {
     static bool     escaped  = false;        // escape flag
     static bool     overflow = false;        // overflow flag
 
+    if (ch559UpdateMode) {
+        return false;
+    }
+
     while (uart_available()) {
         uint8_t c = uart_getchar();
 
@@ -202,4 +210,3 @@ bool process_packet(matrix_row_t current_matrix[]) {
 
     return matrix_has_changed;
 }
-
