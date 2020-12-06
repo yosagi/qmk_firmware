@@ -88,6 +88,8 @@ void virtser_recv(const uint8_t ch) {
         print_set_sendchar(sendchar);
 
         // send bootloader command
+        uart_putchar('\n');
+        _delay_ms(100);
         uart_putchar('k');
         uart_putchar('b');
         uart_putchar('\n');
