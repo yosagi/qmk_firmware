@@ -23,6 +23,10 @@
 
 bool ch559UpdateMode = false;
 
+bool    ch559_start  = false;
+uint8_t device_cnt = 0;
+uint8_t hid_info_cnt = 0;
+
 __attribute__((weak)) void keyboard_post_init_kb_rev(void) {}
 
 void keyboard_post_init_kb() {
@@ -78,6 +82,17 @@ enum {
 
 #define SERIAL_BUFFER_LEN 256
 
+void send_reset_cmd(void) {
+    hid_info_cnt = 0;
+    device_cnt = 0;
+
+    uart_putchar('\n');
+    _delay_ms(10);
+    uart_putchar('k');
+    uart_putchar('r');
+    uart_putchar('\n');
+}
+
 bool parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_matrix) {
     static uint8_t pre_keyreport[8];
     bool           matrix_has_changed = false;
@@ -100,11 +115,18 @@ bool parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_matrix) {
     }
 
     switch (buf[MSG_TYP]) {
+        case STARTUP:
+            dprintf("CH559 start\n");
+            ch559_start = true;
+            break;
+
         case CONNECTED:
+            device_cnt++;
             dprintf("Connected\n");
             break;
 
         case DISCONNECTED:
+            device_cnt--;
             dprintf("Disconnected\n");
             for (uint8_t rowIdx = 0; rowIdx < MATRIX_ROWS; rowIdx++) {
                 if (current_matrix[rowIdx] != 0) {
@@ -113,6 +135,10 @@ bool parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_matrix) {
                 }
                 memset(pre_keyreport, 0, sizeof(pre_keyreport));
             }
+            break;
+
+        case HID_INFO:
+            hid_info_cnt++;
             break;
 
         case DEVICE_POLL:

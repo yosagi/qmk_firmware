@@ -19,6 +19,7 @@
 #include "quantum.h"
 
 bool process_packet(matrix_row_t current_matrix[]);
+void send_reset_cmd(void);
 
 /* This is a shortcut to help you visually see your layout.
  *

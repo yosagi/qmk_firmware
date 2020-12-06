@@ -15,7 +15,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "keyboard_quantizer.h"
 #include "rev3.h"
+
 #include "quantum.h"
 #include "virtser.h"
 #include "uart.h"
@@ -26,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 extern bool                       ch559UpdateMode;
 extern USB_ClassInfo_CDC_Device_t cdc_device;
+extern uint8_t                    hid_info_cnt;
 
 __attribute__((weak)) void virtser_send(const uint8_t byte) {}
 
@@ -57,12 +60,21 @@ void process_char(const uint8_t ch) {
     switch (ch) {
         case 'd':
             if (debug_enable) {
-                dprintln("\nDisable debug print");
+                println("\nDisable debug print");
                 debug_enable = false;
             } else {
                 debug_enable = true;
-                dprintln("\nEnable debug print");
+                println("\nEnable debug print");
             }
+            break;
+
+        case 's':
+            xprintf("hid_info_cnt:%d\n", hid_info_cnt);
+            break;
+
+        case 'r':
+            println("Reset CH559");
+            send_reset_cmd();
             break;
 
         default:
