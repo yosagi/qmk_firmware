@@ -16,10 +16,10 @@
 
 #include "keyboard_quantizer.h"
 
+#include "print.h"
 #include "string.h"
 #include "uart.h"
 #include "quantum.h"
-#include "debug.h"
 
 bool ch559UpdateMode = false;
 
@@ -28,6 +28,7 @@ __attribute__((weak)) void keyboard_post_init_kb_rev(void) {}
 void keyboard_post_init_kb() {
     // debug_enable   = true;
     // debug_keyboard = true;
+    keyboard_post_init_kb_rev();
 }
 
 enum {
@@ -82,12 +83,20 @@ bool parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_matrix) {
     bool           matrix_has_changed = false;
     uint16_t       msg_len            = buf[LEN_L] | ((uint16_t)buf[LEN_H] << 8);
 
-    // dprintf("Packet received:%d, %d\n", widx, msg_len);
+    // dprintf("Packet received:%d\n", msg_len);
 
     // validate packet length
     if (cnt < REPORT_START || msg_len != cnt - REPORT_START) {
         matrix_has_changed = false;
         return matrix_has_changed;
+    }
+
+    if (debug_enable) {
+        print("Receive:");
+        for (int idx = 0; idx < cnt; idx++) {
+            xprintf("%02X ", buf[idx]);
+        }
+        xputc('\n');
     }
 
     switch (buf[MSG_TYP]) {

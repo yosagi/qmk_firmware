@@ -19,12 +19,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "quantum.h"
 #include "virtser.h"
 #include "uart.h"
+#include "sendchar.h"
 #include "lufa.h"
 #include "bootloader.h"
 #include <util/delay.h>
 
 extern bool                       ch559UpdateMode;
 extern USB_ClassInfo_CDC_Device_t cdc_device;
+
+__attribute__((weak)) void virtser_send(const uint8_t byte) {}
 
 static void bootloader_check(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo) {
     // jump to bootloader if virtser baudrate is 1200bps
@@ -37,12 +40,40 @@ void EVENT_CDC_Device_ControLineStateChanged(USB_ClassInfo_CDC_Device_t* const C
 
 void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo) { bootloader_check(CDCInterfaceInfo); }
 
-void keyboard_post_init_kb_rev(void) { print_set_sendchar(virtser_send); }
+int8_t virtser_sendchar(uint8_t c) {
+    virtser_send(c);
+    return 0;
+}
+
+void keyboard_post_init_kb_rev(void) {
+#ifdef VIRTSER_ENABLE
+    print_set_sendchar(virtser_sendchar);
+#endif
+}
+
+void process_char(const uint8_t ch) {
+    virtser_send(ch);
+
+    switch (ch) {
+        case 'd':
+            if (debug_enable) {
+                dprintln("\nDisable debug print");
+                debug_enable = false;
+            } else {
+                debug_enable = true;
+                dprintln("\nEnable debug print");
+            }
+            break;
+
+        default:
+            break;
+    }
+}
 
 void virtser_recv(const uint8_t ch) {
     if (!ch559UpdateMode && (cdc_device.State.LineEncoding.BaudRateBPS == 57600)) {
         ch559UpdateMode = true;
-        print_set_sendchar(send_char);
+        print_set_sendchar(sendchar);
 
         // send bootloader command
         uart_putchar('k');
@@ -58,6 +89,8 @@ void virtser_recv(const uint8_t ch) {
 
     if (ch559UpdateMode) {
         uart_putchar(ch);
+    } else {
+        process_char(ch);
     }
 }
 

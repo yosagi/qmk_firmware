@@ -7,5 +7,6 @@ SRC += matrix.c uart.c
 
 EEPROM_DRIVER = i2c
 
-CONSOLE_ENABLE = no        # Console for debug
+CONSOLE_ENABLE = yes
 VIRTSER_ENABLE = yes
+
