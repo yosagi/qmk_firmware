@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ECmicro.h"
+#include "ec_switch_matrix.h"
 
 #include "quantum.h"
 #include "analog.h"
@@ -30,15 +30,6 @@
 #define S6 6
 #define S7 7
 
-// analog connction settings
-#define DISCHARGE_PIN F6
-#define ANALOG_PORT F7
-
-#ifndef MUX_SEL_PIN
-#    define MUX_SEL_PINS \
-        { F0, F1, F4 }
-#endif
-
 // pin connections
 const uint8_t row_pins[]     = MATRIX_ROW_PINS;
 const uint8_t col_channels[] = MATRIX_COL_PINS;
@@ -46,8 +37,8 @@ const uint8_t mux_sel_pins[] = MUX_SEL_PINS;
 
 _Static_assert(sizeof(mux_sel_pins) == 3, "invalid MUX_SEL_PINS");
 
-static ecmicro_config_t config;
-static uint16_t         ecmicro_sw_value[MATRIX_ROWS][MATRIX_COLS];
+static ecsm_config_t config;
+static uint16_t      ecsm_sw_value[MATRIX_ROWS][MATRIX_COLS];
 
 static inline void discharge_capacitor(void) { setPinOutput(DISCHARGE_PIN); }
 static inline void charge_capacitor(uint8_t row) {
@@ -61,29 +52,30 @@ static inline void clear_all_row_pins(void) {
     }
 }
 
-void init_mux_sel(void) {
+static inline void init_mux_sel(void) {
     for (int idx = 0; idx < sizeof(mux_sel_pins); idx++) {
         setPinOutput(mux_sel_pins[idx]);
     }
 }
 
-void select_mux(uint8_t col) {
+static inline void select_mux(uint8_t col) {
     uint8_t ch = col_channels[col];
     writePin(mux_sel_pins[0], ch & 1);
     writePin(mux_sel_pins[1], ch & 2);
     writePin(mux_sel_pins[2], ch & 4);
 }
 
-void init_row(void) {
+static inline void init_row(void) {
     for (int idx = 0; idx < sizeof(row_pins); idx++) {
         setPinOutput(row_pins[idx]);
         writePinLow(row_pins[idx]);
     }
 }
 
-int ecmicro_init(ecmicro_config_t const* const ecmicro_config) {
+// Initialize pins
+int ecsm_init(ecsm_config_t const* const ecsm_config) {
     // save config
-    config = *ecmicro_config;
+    config = *ecsm_config;
 
     // initialize discharge pin as discharge mode
     writePinLow(DISCHARGE_PIN);
@@ -104,7 +96,8 @@ int ecmicro_init(ecmicro_config_t const* const ecmicro_config) {
     return 0;
 }
 
-uint16_t ecmicro_readkey_raw(uint8_t row, uint8_t col) {
+// Read key value of key (row, col)
+uint16_t ecsm_readkey_raw(uint8_t row, uint8_t col) {
     uint16_t sw_value = 0;
 
     discharge_capacitor();
@@ -124,17 +117,18 @@ uint16_t ecmicro_readkey_raw(uint8_t row, uint8_t col) {
     return sw_value;
 }
 
-bool ecmicro_update_key(matrix_row_t* current_row, uint8_t col, uint16_t sw_value) {
+// Update press/release state of key at (row, col)
+bool ecsm_update_key(matrix_row_t* current_row, uint8_t col, uint16_t sw_value) {
     bool current_state = (*current_row >> col) & 1;
 
     // press to release
-    if (current_state && sw_value < config.low_threthold) {
+    if (current_state && sw_value < config.low_threshold) {
         *current_row &= ~(1 << col);
         return true;
     }
 
     // release to press
-    if ((!current_state) && sw_value > config.high_threthold) {
+    if ((!current_state) && sw_value > config.high_threshold) {
         *current_row |= (1 << col);
         return true;
     }
@@ -142,23 +136,25 @@ bool ecmicro_update_key(matrix_row_t* current_row, uint8_t col, uint16_t sw_valu
     return false;
 }
 
-bool ecmicro_matrix_scan(matrix_row_t current_matrix[]) {
+// Scan key values and update matrix state
+bool ecsm_matrix_scan(matrix_row_t current_matrix[]) {
     bool updated = false;
 
     for (int col = 0; col < sizeof(col_channels); col++) {
         for (int row = 0; row < sizeof(row_pins); row++) {
-            ecmicro_sw_value[row][col] = ecmicro_readkey_raw(row, col);
-            updated |= ecmicro_update_key(&current_matrix[row], col, ecmicro_sw_value[row][col]);
+            ecsm_sw_value[row][col] = ecsm_readkey_raw(row, col);
+            updated |= ecsm_update_key(&current_matrix[row], col, ecsm_sw_value[row][col]);
         }
     }
 
     return updated;
 }
 
-void ecmicro_dprint_matrix(void) {
+// Debug print key values
+void ecsm_dprint_matrix(void) {
     for (int row = 0; row < sizeof(row_pins); row++) {
         for (int col = 0; col < sizeof(col_channels); col++) {
-            dprintf("%5d", ecmicro_sw_value[row][col]);
+            dprintf("%4d", ecsm_sw_value[row][col]);
         }
         dprintf("\n");
     }
