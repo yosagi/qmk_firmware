@@ -30,10 +30,8 @@ void keyboard_post_init_kb() {
     led_on();
 }
 
-void matrix_init_kb(void) {
+void keyboard_pre_init_kb(void) {
     // Turn on extern circuit
     setPinOutput(F7);
     writePinHigh(F7);
-
-    matrix_init_user();
 }
