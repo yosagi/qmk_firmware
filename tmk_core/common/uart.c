@@ -79,8 +79,13 @@
 #endif
 
 // These buffers may be any size from 2 to 256 bytes.
-#define RX_BUFFER_SIZE 64
-#define TX_BUFFER_SIZE 256
+#ifndef RX_BUFFER_SIZE
+#    define RX_BUFFER_SIZE 64
+#endif
+
+#ifndef TX_BUFFER_SIZE
+#    define TX_BUFFER_SIZE 256
+#endif
 
 static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
 static volatile uint8_t tx_buffer_head;

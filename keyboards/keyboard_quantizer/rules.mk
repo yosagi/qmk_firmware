@@ -23,4 +23,17 @@ RGBLIGHT_ENABLE = no        # Enable keyboard RGB underglow
 BLUETOOTH_ENABLE = no       # Enable Bluetooth
 AUDIO_ENABLE = no           # Audio output
 
-DEFAULT_FOLDER = keyboard_quantizer/rev1
+DEFAULT_FOLDER = keyboard_quantizer/rev3
+
+SRC += report_descriptor_parser.c report_parser.c
+
+QUANTIZER_PARSER = $(strip $(PARSER))
+ifeq ($(QUANTIZER_PARSER), default)
+  OPT_DEFS += -DQUANTIZER_REPORT_PARSER=REPORT_PARSER_DEFAULT
+endif
+ifeq ($(QUANTIZER_PARSER), fixed)
+  OPT_DEFS += -DQUANTIZER_REPORT_PARSER=REPORT_PARSER_FIXED
+endif
+ifeq ($(QUANTIZER_PARSER), user)
+  OPT_DEFS += -DQUANTIZER_REPORT_PARSER=REPORT_PARSER_USER
+endif

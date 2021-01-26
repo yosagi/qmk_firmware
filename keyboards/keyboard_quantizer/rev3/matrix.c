@@ -28,13 +28,15 @@ bool no_com_from_start = true;
 extern const bool    ch559_start;
 extern const uint8_t hid_info_cnt;
 extern const uint8_t device_cnt;
-extern const bool    ch559UpdateMode;
+extern const bool    ch559_update_mode;
 
 void matrix_init_custom(void) { uart_init(115200); }
 
 bool matrix_scan_custom(matrix_row_t current_matrix[]) {
     static uint16_t reset_timer = 0;
-    if (no_com_from_start && (!ch559UpdateMode)) {
+
+    // jump to bootloader if no USB device is connected from startup to NOCOM_TIMEOUT
+    if (no_com_from_start && (!ch559_update_mode)) {
         if (device_cnt > 0) {
             no_com_from_start = false;
         } else {
@@ -44,7 +46,8 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
         }
     }
 
-    if ((!ch559_start) && (!ch559UpdateMode) && timer_elapsed(reset_timer) > 100) {
+    if ((!ch559_start) && (!ch559_update_mode) && timer_elapsed(reset_timer) > 100) {
+        // send reset command until receive start packet
         send_reset_cmd();
         reset_timer = timer_read();
     }

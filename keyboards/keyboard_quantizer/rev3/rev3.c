@@ -26,8 +26,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "bootloader.h"
 #include <util/delay.h>
 
-extern bool                       ch559UpdateMode;
+extern bool                       ch559_update_mode;
 extern USB_ClassInfo_CDC_Device_t cdc_device;
+extern uint8_t                    device_cnt;
 extern uint8_t                    hid_info_cnt;
 
 __attribute__((weak)) void virtser_send(const uint8_t byte) {}
@@ -54,6 +55,31 @@ void keyboard_post_init_kb_rev(void) {
 #endif
 }
 
+void send_reset_cmd(void) {
+    // send reset command to ch559
+    hid_info_cnt = 0;
+    device_cnt   = 0;
+
+    uart_putchar('\n');
+    _delay_ms(10);
+    uart_putchar('k');
+    uart_putchar('r');
+    uart_putchar('\n');
+}
+
+void send_bootloader_cmd(void) {
+    // send bootloader jump command to ch559
+    hid_info_cnt = 0;
+    device_cnt   = 0;
+
+    uart_putchar('\n');
+    _delay_ms(100);
+    uart_putchar('k');
+    uart_putchar('b');
+    uart_putchar('\n');
+}
+
+
 void process_char(const uint8_t ch) {
     virtser_send(ch);
 
@@ -77,39 +103,48 @@ void process_char(const uint8_t ch) {
             send_reset_cmd();
             break;
 
+        case 'b':
+            bootloader_jump();
+            break;
+
         default:
             break;
     }
 }
 
 void virtser_recv(const uint8_t ch) {
-    if (!ch559UpdateMode && (cdc_device.State.LineEncoding.BaudRateBPS == 57600)) {
-        ch559UpdateMode = true;
+    if (!ch559_update_mode && (cdc_device.State.LineEncoding.BaudRateBPS == 57600)) {
+        // enter ch559 update mode
+        ch559_update_mode = true;
+
+        // disable debug print through virtser
         print_set_sendchar(sendchar);
 
         // send bootloader command
-        uart_putchar('\n');
-        _delay_ms(100);
-        uart_putchar('k');
-        uart_putchar('b');
-        uart_putchar('\n');
+        send_bootloader_cmd();
+
+        // wait bootloader activation
         _delay_ms(100);
 
         // reinitialize uart
         uart_init(57600);
+
         // send dummy byte
         uart_putchar(0);
     }
 
-    if (ch559UpdateMode) {
+    if (ch559_update_mode) {
+        // pass through received virtser data to uart
         uart_putchar(ch);
     } else {
+        // process received data for simple console
         process_char(ch);
     }
 }
 
 void matrix_scan_kb() {
-    if (ch559UpdateMode) {
+    if (ch559_update_mode) {
+        // pass through received uart data to virtser
         while (uart_available()) {
             virtser_send(uart_getchar());
         }
