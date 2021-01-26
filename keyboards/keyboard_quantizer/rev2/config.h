@@ -18,3 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 #define DEBUG_MATRIX_SCAN_RATE
+
+#undef QUANTIZER_REPORT_PARSER
+#define QUANTIZER_REPORT_PARSER REPORT_PARSER_FIXED
