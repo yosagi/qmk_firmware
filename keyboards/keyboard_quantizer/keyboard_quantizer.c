@@ -193,6 +193,7 @@ bool          parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_mat
     return matrix_has_changed;
 }
 
+__attribute__((weak))
 void keyboard_report_hook(keyboard_parse_result_t const* report) {
     if (debug_enable) {
         xprintf("Keyboard report\n");
@@ -213,6 +214,8 @@ void keyboard_report_hook(keyboard_parse_result_t const* report) {
 }
 
 bool mouse_send_flag = false;
+
+__attribute__((weak))
 void mouse_report_hook(mouse_parse_result_t const* report) {
     if (debug_enable) {
         xprintf("Mouse report\n");
@@ -221,6 +224,7 @@ void mouse_report_hook(mouse_parse_result_t const* report) {
         xprintf("y:%d ", report->y);
         xprintf("v:%d ", report->v);
         xprintf("h:%d ", report->h);
+        xprintf("undef:%u\n", report->undefined);
     }
 
     mouse_send_flag = true;
