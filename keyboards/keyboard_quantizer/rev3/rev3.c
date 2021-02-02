@@ -86,11 +86,12 @@ void process_char(const uint8_t ch) {
     switch (ch) {
         case 'd':
             if (debug_enable) {
-                println("\nDisable debug print");
+                println("\nDisable dprint");
                 debug_enable = false;
             } else {
                 debug_enable = true;
-                println("\nEnable debug print");
+                debug_keyboard = true;
+                println("\nEnable dprint");
             }
             break;
 

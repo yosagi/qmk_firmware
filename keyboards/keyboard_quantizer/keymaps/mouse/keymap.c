@@ -22,13 +22,21 @@
 
 #define GESTURE_MOVE_THRESHOLD 90
 
+enum custom_keycodes {
+    SPD_1 = SAFE_RANGE,
+    SPD_2,
+    SPD_3,
+};
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    [0] = {{KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, LCTL(KC_C), LCTL(KC_V), MO(1)}},
-    [1] = {{KC_ENT, KC_BSPC, KC_NO, LCTL(KC_Z), LCTL(KC_Y), _______, _______, _______}},
+    [0] = {{KC_BTN1, KC_BTN2, KC_BTN3, KC_BTN4, KC_BTN5, LCTL(KC_C), LCTL(KC_V), MO(1)}},
+    [1] = {{KC_ENT, KC_BSPC, SPD_3, LCTL(KC_Z), LCTL(KC_Y), SPD_1, SPD_2, _______}},
 };
 // clang-format on
 
+static uint8_t spd_rate_num   = 1;
+static uint8_t spd_rate_den   = 1;
 static int16_t gesture_move_x = 0;
 static int16_t gesture_move_y = 0;
 static bool    gesture_wait   = false;
@@ -36,7 +44,7 @@ static bool    gesture_wait   = false;
 uint8_t recognize_gesture(int16_t x, int16_t y) {
     uint8_t gesture_id = 0;
 
-    if (abs(x) + abs(y)  < GESTURE_MOVE_THRESHOLD) {
+    if (abs(x) + abs(y) < GESTURE_MOVE_THRESHOLD) {
         gesture_id = 0;
     } else if (x >= 0 && y >= 0) {
         gesture_id = 1;
@@ -71,21 +79,52 @@ void process_gesture(uint8_t gesture_id) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
-    if (keycode == MO(1)) {
-        if (record->event.pressed) {
-            gesture_move_x = 0;
-            gesture_move_y = 0;
-            gesture_wait   = true;
-        } else {
-            gesture_wait       = false;
-            uint8_t gesture_id = recognize_gesture(gesture_move_x, gesture_move_y);
-            process_gesture(gesture_id);
-            dprintf("id:%d x:%d,y:%d\n", gesture_id, gesture_move_x, gesture_move_y);
-        }
+    switch (keycode) {
+        case KC_BTN1 ... KC_BTN5: {
+            report_mouse_t mouse = pointing_device_get_report();
+            if (record->event.pressed) {
+                mouse.buttons |= (1 << (keycode - KC_BTN1));
+            } else {
+                mouse.buttons &= ~(1 << (keycode - KC_BTN1));
+            }
+            pointing_device_set_report(mouse);
 
+            return false;
+        } break;
+
+        case SPD_1:
+            spd_rate_num = 1;
+            spd_rate_den = 1;
+            return false;
+
+        case SPD_2:
+            spd_rate_num = 1;
+            spd_rate_den = 2;
+            return false;
+
+        case SPD_3:
+            spd_rate_num = 2;
+            spd_rate_den = 1;
+            return false;
+
+        default:
+            break;
     }
 
     return true;
+}
+
+void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
+    if (layer_state_is(1) && gesture_wait == false) {
+        gesture_wait   = true;
+        gesture_move_x = 0;
+        gesture_move_y = 0;
+    } else if (gesture_wait == true && layer_state_is(0)) {
+        gesture_wait       = false;
+        uint8_t gesture_id = recognize_gesture(gesture_move_x, gesture_move_y);
+        process_gesture(gesture_id);
+        dprintf("id:%d x:%d,y:%d\n", gesture_id, gesture_move_x, gesture_move_y);
+    }
 }
 
 extern bool          mouse_send_flag;
@@ -118,17 +157,29 @@ void mouse_report_hook(mouse_parse_result_t const* report) {
     //
     // Assign mouse movement
     //
-    mouse_send_flag = true;
+    mouse_send_flag      = true;
     report_mouse_t mouse = pointing_device_get_report();
 
-    if (layer_state == 0) {
-        mouse.buttons = report->button;
-    } else {
+    if (layer_state != 0) {
         mouse.buttons = 0;
     }
 
-    mouse.x += report->x;
-    mouse.y += report->y;
+    static int16_t x_rem;
+    static int16_t y_rem;
+
+    int16_t x = (x_rem + report->x) * spd_rate_num / spd_rate_den;
+    int16_t y = (y_rem + report->y) * spd_rate_num / spd_rate_den;
+
+    if (spd_rate_den - spd_rate_num > 0) {
+        x_rem = (x_rem + report->x) - (x * spd_rate_den);
+        y_rem = (y_rem + report->y) - (y * spd_rate_den);
+    } else {
+        x_rem = 0;
+        y_rem = 0;
+    }
+
+    mouse.x += x;
+    mouse.y += y;
     mouse.v += report->v;
     mouse.h += report->h;
 
