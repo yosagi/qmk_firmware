@@ -40,7 +40,7 @@ const uint8_t col_sels[] = {6, 4, 3, 0, 1, 2, 5};
 #define LEN(x) (sizeof(x) / sizeof(x[0]))
 
 
-#define ERROR_DISCONNECT_COUNT 5
+#define ERROR_DISCONNECT_COUNT 20
 
 #define ROWS_PER_HAND (MATRIX_ROWS / 2)
 
