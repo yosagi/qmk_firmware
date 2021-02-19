@@ -26,8 +26,10 @@
 #include "pointing_device.h"
 
 #ifndef QUANTIZER_REPORT_PARSER
-#define QUANTIZER_REPORT_PARSER REPORT_PARSER_DEFAULT
+#    define QUANTIZER_REPORT_PARSER REPORT_PARSER_DEFAULT
 #endif
+
+#define NO_PRINT
 
 bool ch559_update_mode = false;
 
@@ -76,8 +78,7 @@ enum {
 
 #if QUANTIZER_REPORT_PARSER == REPORT_PARSER_FIXED
 // accept only boot protocol keyboard packet
-static bool report_parser_fixed(uint8_t const * buf, uint8_t msg_len, uint8_t * pre_keyreport,  matrix_row_t * current_matrix) {
-
+static bool report_parser_fixed(uint8_t const* buf, uint8_t msg_len, uint8_t* pre_keyreport, matrix_row_t* current_matrix) {
     bool matrix_has_changed = false;
 
     dprintf("Report received\n");
@@ -130,6 +131,7 @@ bool          parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_mat
         return matrix_has_changed;
     }
 
+#ifndef NO_PRINT
     if (debug_enable) {
         // print received packet in hex format
         xprintf("Receive: device:%d, ep:%d\n", packet_header->dev_num, packet_header->ep_num);
@@ -138,6 +140,7 @@ bool          parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_mat
         }
         xputc('\n');
     }
+#endif
 
     switch (buf[MSG_TYP]) {
         case STARTUP:
@@ -175,7 +178,7 @@ bool          parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_mat
 #elif QUANTIZER_REPORT_PARSER == REPORT_PARSER_USER
             parse_report_descriptor(packet_header->dev_type, &packet_header->data_start, packet_header->len);
 #else
-    #error "Unknwon report parser"
+#    error "Unknwon report parser"
 #endif
             break;
 
@@ -193,8 +196,7 @@ bool          parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_mat
     return matrix_has_changed;
 }
 
-__attribute__((weak))
-void keyboard_report_hook(keyboard_parse_result_t const* report) {
+__attribute__((weak)) void keyboard_report_hook(keyboard_parse_result_t const* report) {
     if (debug_enable) {
         xprintf("Keyboard report\n");
         for (int idx = 0; idx < sizeof(report->bits); idx++) {
@@ -215,8 +217,7 @@ void keyboard_report_hook(keyboard_parse_result_t const* report) {
 
 bool mouse_send_flag = false;
 
-__attribute__((weak))
-void mouse_report_hook(mouse_parse_result_t const* report) {
+__attribute__((weak)) void mouse_report_hook(mouse_parse_result_t const* report) {
     if (debug_enable) {
         xprintf("Mouse report\n");
         xprintf("b:%d ", report->button);
@@ -264,56 +265,59 @@ bool process_packet(matrix_row_t current_matrix[]) {
         return false;
     }
 
+    // process all available packet
     while (uart_available()) {
-        uint8_t c = uart_getchar();
+        while (uart_available()) {
+            uint8_t c = uart_getchar();
 
-        // process SLIP
-        if (c == SLIP_END) {
-            // dprintf("Detect END signal\n");
-            if (overflow) {
-                // reset receive buffer
-                overflow         = false;
-                receive_complete = false;
-                widx             = 0;
-                escaped          = false;
-                memset(buf, 0, sizeof(buf));
-            } else {
-                receive_complete = true;
-            }
-            break;
-        } else if (c == SLIP_ESC) {
-            escaped = true;
-        } else if (widx < sizeof(buf)) {
-            if (escaped) {
-                if (c == SLIP_ESC_END) {
-                    buf[widx] = SLIP_END;
-                } else if (c == SLIP_ESC_ESC) {
-                    buf[widx] = SLIP_ESC;
+            // process SLIP
+            if (c == SLIP_END) {
+                // dprintf("Detect END signal\n");
+                if (overflow) {
+                    // reset receive buffer
+                    overflow         = false;
+                    receive_complete = false;
+                    widx             = 0;
+                    escaped          = false;
+                    memset(buf, 0, sizeof(buf));
+                } else {
+                    receive_complete = true;
+                }
+                break;
+            } else if (c == SLIP_ESC) {
+                escaped = true;
+            } else if (widx < sizeof(buf)) {
+                if (escaped) {
+                    if (c == SLIP_ESC_END) {
+                        buf[widx] = SLIP_END;
+                    } else if (c == SLIP_ESC_ESC) {
+                        buf[widx] = SLIP_ESC;
+                    } else {
+                        buf[widx] = c;
+                    }
+                    escaped = false;
                 } else {
                     buf[widx] = c;
                 }
-                escaped = false;
-            } else {
-                buf[widx] = c;
-            }
 
-            widx++;
-            if (widx > sizeof(buf)) {
-                dprintf("Buffer overflow\n");
-                overflow = true;
-                widx     = 0;
+                widx++;
+                if (widx > sizeof(buf)) {
+                    dprintf("Buffer overflow\n");
+                    overflow = true;
+                    widx     = 0;
+                }
             }
         }
-    }
 
-    if (receive_complete) {
-        matrix_has_changed = parse_packet(buf, widx, current_matrix);
+        if (receive_complete) {
+            matrix_has_changed = parse_packet(buf, widx, current_matrix);
 
-        receive_complete = false;
-        widx             = 0;
-        escaped          = false;
-        overflow         = false;
-        memset(buf, 0, sizeof(buf));
+            receive_complete = false;
+            widx             = 0;
+            escaped          = false;
+            overflow         = false;
+            memset(buf, 0, sizeof(buf));
+        }
     }
 
     return matrix_has_changed;

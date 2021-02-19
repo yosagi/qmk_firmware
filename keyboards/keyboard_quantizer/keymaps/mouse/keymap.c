@@ -35,11 +35,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 // clang-format on
 
+extern bool mouse_send_flag;
+
 static uint8_t spd_rate_num   = 1;
 static uint8_t spd_rate_den   = 1;
 static int16_t gesture_move_x = 0;
 static int16_t gesture_move_y = 0;
 static bool    gesture_wait   = false;
+static uint8_t kc_no_to_kc_offset = 0;
+static uint8_t btn_release_flag = 0;
 
 uint8_t recognize_gesture(int16_t x, int16_t y) {
     uint8_t gesture_id = 0;
@@ -111,7 +115,52 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             break;
     }
 
+    // Enable layer tap with KC_BTNx
+    if (keycode >= QK_LAYER_TAP && keycode <= QK_LAYER_TAP_MAX) {
+        uint8_t kc = keycode & 0xFF;
+        if (kc == KC_NO) {
+            kc = kc_no_to_kc_offset;
+            dprintf("KC:%d, tap:%d\n", kc, record->tap.count);
+            if (record->tap.count > 0 && !record->tap.interrupted) {
+                // set mouse button bit
+                report_mouse_t mouse = pointing_device_get_report();
+                mouse.buttons |= (1 << (kc - KC_BTN1));
+                pointing_device_set_report(mouse);
+                mouse_send_flag = true;
+                btn_release_flag |= (1 << (kc - KC_BTN1));
+            }
+        }
+    }
+
     return true;
+}
+
+// override keymap_key_to_keycode
+uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
+    uint16_t keycode = pgm_read_word(&keymaps[(layer)][(key.row)][(key.col)]);
+
+    if (keycode >= QK_LAYER_TAP && keycode <= QK_LAYER_TAP_MAX) {
+        uint8_t kc = keycode & 0xFF;
+        if (kc >= KC_BTN1 && kc <= KC_BTN5) {
+            kc_no_to_kc_offset = kc;
+            return keycode & 0xFF00;
+        } else {
+            kc_no_to_kc_offset = 0;
+        }
+    }
+
+    return keycode;
+}
+
+void matrix_scan_user(void) {
+    if (btn_release_flag)
+    {
+        report_mouse_t mouse = pointing_device_get_report();
+        mouse.buttons &= ~btn_release_flag;
+        btn_release_flag = 0;
+        pointing_device_set_report(mouse);
+        mouse_send_flag = true;
+    }
 }
 
 void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
@@ -127,7 +176,6 @@ void post_process_record_user(uint16_t keycode, keyrecord_t* record) {
     }
 }
 
-extern bool          mouse_send_flag;
 extern bool          matrix_has_changed;
 extern matrix_row_t* matrix_dest;
 

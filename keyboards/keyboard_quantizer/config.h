@@ -33,6 +33,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* Debounce reduces chatter (unintended double-presses) - set 0 if debouncing is not needed */
 #define DEBOUNCE 0
 
+#define TAPPING_TERM 200
+
 #define RX_BUFFER_SIZE 256
 
 /* define if matrix has ghost (lacks anti-ghosting diodes) */
