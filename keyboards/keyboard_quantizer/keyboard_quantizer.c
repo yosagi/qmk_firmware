@@ -29,7 +29,7 @@
 #    define QUANTIZER_REPORT_PARSER REPORT_PARSER_DEFAULT
 #endif
 
-#define NO_PRINT
+// #define NO_PRINT
 
 bool ch559_update_mode = false;
 

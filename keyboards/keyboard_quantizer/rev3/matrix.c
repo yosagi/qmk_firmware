@@ -23,7 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "keyboard_quantizer.h"
 
 bool no_com_from_start = true;
-#define NOCOM_TIMEOUT 3000
+#define KEYBOARD_NOCOM_TIMEOUT 3000
+#define CH559_NOCOM_TIMEOUT 30000
 
 extern const bool    ch559_start;
 extern const uint8_t hid_info_cnt;
@@ -40,7 +41,7 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
         if (device_cnt > 0) {
             no_com_from_start = false;
         } else {
-            if (timer_elapsed(reset_timer) > NOCOM_TIMEOUT) {
+            if (timer_elapsed(reset_timer) > KEYBOARD_NOCOM_TIMEOUT) {
                 bootloader_jump();
             }
         }
@@ -50,6 +51,10 @@ bool matrix_scan_custom(matrix_row_t current_matrix[]) {
         // send reset command until receive start packet
         send_reset_cmd();
         reset_timer = timer_read();
+    }
+
+    if ((!ch559_start) && (timer_read() > CH559_NOCOM_TIMEOUT)) {
+        bootloader_jump();
     }
 
     return process_packet(current_matrix);
