@@ -75,6 +75,7 @@ void *dynamic_keymap_key_to_eeprom_address(uint8_t layer, uint8_t row, uint8_t c
     return ((void *)DYNAMIC_KEYMAP_EEPROM_ADDR) + (layer * MATRIX_ROWS * MATRIX_COLS * 2) + (row * MATRIX_COLS * 2) + (column * 2);
 }
 
+__attribute__((weak))
 uint16_t dynamic_keymap_get_keycode(uint8_t layer, uint8_t row, uint8_t column) {
     void *address = dynamic_keymap_key_to_eeprom_address(layer, row, column);
     // Big endian, so we can read/write EEPROM directly from host if we want
@@ -90,6 +91,7 @@ void dynamic_keymap_set_keycode(uint8_t layer, uint8_t row, uint8_t column, uint
     eeprom_update_byte(address + 1, (uint8_t)(keycode & 0xFF));
 }
 
+__attribute__((weak))
 void dynamic_keymap_reset(void) {
     // Reset the keymaps in EEPROM to what is in flash.
     // All keyboards using dynamic keymaps should define a layout

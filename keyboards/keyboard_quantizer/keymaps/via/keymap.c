@@ -15,31 +15,26 @@
  */
 #include QMK_KEYBOARD_H
 #include "keymap_jp.h"
-
-// Defines the keycodes used by our macros in process_record_user
-enum custom_keycodes {
-    CUSTOM_KEYCODE1 = SAFE_RANGE,
-};
-
-#define LOSP LT(_LOWER, KC_SPC)
-#define RAEN LT(_RAISE, KC_ENT)
+#include "dynamic_keymap.h"
 
 // clang-format off
-const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    /* Base */
-    [0] =  LAYOUT(
-        KC_ESC, KC_F1, KC_F2, KC_F3, KC_F4,     KC_F5, KC_F6, KC_F7, KC_F8,     KC_F9, KC_F10, KC_F11, KC_F12,    KC_PSCR, KC_SCROLLLOCK, KC_PAUS,
-        JP_ZHTG, KC_1, KC_2, KC_3, KC_4, KC_5, KC_6, KC_7, KC_8, KC_9, KC_0, JP_MINS, JP_CIRC, JP_YEN, KC_BSPACE, KC_INSERT, KC_HOME, KC_PGUP,       KC_NUMLOCK, KC_KP_SLASH, KC_KP_ASTERISK, KC_KP_MINUS,
-        KC_TAB,   KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, JP_AT, JP_LBRC,           KC_ENT,   KC_DEL, KC_END,  KC_PGDN,          KC_KP_7, KC_KP_8, KC_KP_9, KC_KP_PLUS,
-        KC_CAPS,   KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, JP_SCLN, JP_COLN, JP_RBRC,                                                  KC_KP_4, KC_KP_5, KC_KP_6,
-        KC_LSFT,    KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, JP_SLSH, JP_BSLS, KC_RSFT,                 KC_UP,                     KC_KP_1, KC_KP_2, KC_KP_3, KC_KP_ENTER,
-        KC_LCTRL, KC_LGUI, KC_LALT, JP_MHEN, KC_SPC, KC_HENK, JP_KANA, KC_RALT, KC_RGUI, KC_APP, KC_RCTRL,            KC_LEFT,  KC_DOWN, KC_RIGHT,       KC_KP_0,          KC_KP_DOT
-    ),
-};
+// Set empty to reduce firm size
+const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = { };
 // clang-format on
 
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    return true;
+// Override to avoid messy initial keymap show on VIA
+// Patch to dynamic_keymap.c is required
+void dynamic_keymap_reset(void) {
+    for (int layer = 0; layer < DYNAMIC_KEYMAP_LAYER_COUNT; layer++) {
+        for (int row = 0; row < MATRIX_ROWS - 1; row++) {
+            for (int column = 0; column < MATRIX_COLS; column++) {
+                dynamic_keymap_set_keycode(layer, row, column, row * MATRIX_COLS + column);
+            }
+        }
+        for (int column = 0; column < MATRIX_COLS; column++) {
+            dynamic_keymap_set_keycode(layer, MATRIX_ROWS - 1, column, KC_LCTRL + column);
+        }
+    }
 }
 
 #ifdef OLED_DRIVER_ENABLE
