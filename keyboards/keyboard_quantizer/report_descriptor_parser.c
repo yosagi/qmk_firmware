@@ -11,8 +11,8 @@
 
 #define NO_PRINT
 
-#include "print.h"
 #include "debug.h"
+#include "print.h"
 
 #define LEN(x) (sizeof(x) / sizeof(x[0]))
 
@@ -97,7 +97,7 @@ static void delete_hid_device(uint8_t interface) {
 }
 
 static bool get_next_item(uint8_t const **buf, uint16_t *const len,
-                   hid_report_item_t *const item) {
+                          hid_report_item_t *const item) {
   uint8_t const *data = *buf;
 
   item->prefix = data[0];
@@ -152,8 +152,8 @@ static bool get_next_item(uint8_t const **buf, uint16_t *const len,
   }
 }
 
-bool parse_report_descriptor(uint8_t interface,
-                             uint8_t const *desc, uint16_t len) {
+bool parse_report_descriptor(uint8_t interface, uint8_t const *desc,
+                             uint16_t len) {
   uint8_t const *buf = desc;
   uint16_t remain_len = len;
 
@@ -168,7 +168,6 @@ bool parse_report_descriptor(uint8_t interface,
     dprintln("No empty hid device table");
     return false;
   }
-
 
   hid_device->interface = interface;
   hid_device->id_collection = NULL;
@@ -192,19 +191,21 @@ bool parse_report_descriptor(uint8_t interface,
     case HID_RI_COLLECTION(0):
       dprintln("Start collection");
 
-      current_collection = find_empty_id_idx_begin();
-      if (current_collection == NULL) {
-        dprintln("Error");
-        delete_hid_device(interface);
+      if (level == 0) {
+        current_collection = find_empty_id_idx_begin();
+        if (current_collection == NULL) {
+          dprintln("Error");
+          delete_hid_device(interface);
 
-        return false;
-      } else {
-        dprintf("Register to collection 0x%08X\n", current_collection);
+          return false;
+        } else {
+          dprintf("Register to collection 0x%08X\n", current_collection);
+        }
+
+        current_collection->usage = top_usage;
+        current_collection->usage_page = top_usage_page;
+        current_member = NULL;
       }
-
-      current_collection->usage = top_usage;
-      current_collection->usage_page = top_usage_page;
-      current_member = NULL;
       usage_table_idx = 0;
       level++;
 
@@ -213,24 +214,25 @@ bool parse_report_descriptor(uint8_t interface,
     case HID_RI_END_COLLECTION(0):
       dprintln("End collection");
 
-      if (current_collection != NULL &&
-          current_collection->report_def_start != NULL) {
-        dprintf("New collection defined 0x%08X\n", current_collection);
+      if (level == 1) {
+        if (current_collection != NULL &&
+            current_collection->report_def_start != NULL) {
+          dprintf("New collection defined 0x%08X\n", current_collection);
 
-        if (hid_device->id_collection == NULL) {
-          hid_device->id_collection = current_collection;
-        } else {
-          hid_id_collection_t *tail = hid_device->id_collection;
-          while (tail->next != NULL) {
-            tail = tail->next;
+          if (hid_device->id_collection == NULL) {
+            hid_device->id_collection = current_collection;
+          } else {
+            hid_id_collection_t *tail = hid_device->id_collection;
+            while (tail->next != NULL) {
+              tail = tail->next;
+            }
+            tail->next = current_collection;
           }
-          tail->next = current_collection;
         }
+        current_collection = NULL;
+        current_member = NULL;
+        usage_table_idx = 0;
       }
-
-      current_collection = NULL;
-      current_member = NULL;
-      usage_table_idx = 0;
 
       level--;
       break;
@@ -358,36 +360,37 @@ bool parse_report_descriptor(uint8_t interface,
     }
   }
 
-    //
-    // Compress collections
-    //
-    if (hid_device == NULL || hid_device->id_collection == NULL) {
-        return false;
+  //
+  // Compress collections
+  //
+  if (hid_device == NULL || hid_device->id_collection == NULL) {
+    return false;
+  }
+
+  hid_id_collection_t *base = hid_device->id_collection;
+  hid_id_collection_t *collection = hid_device->id_collection->next;
+
+  while (collection != NULL) {
+    if (collection->id == 0) {
+      hid_report_member_t *tail = base->report_def_start;
+
+      if (tail == NULL)
+        break;
+
+      while (tail->next != NULL) {
+        tail = tail->next;
+      }
+      tail->next = collection->report_def_start;
+
+      hid_id_collection_t *del = collection;
+      collection = collection->next;
+      base->next = collection;
+      memset(del, 0, sizeof(*del));
+    } else {
+      base = collection;
+      collection = base->next;
     }
-
-    hid_id_collection_t *base       = hid_device->id_collection;
-    hid_id_collection_t *collection = hid_device->id_collection->next;
-
-    while (collection != NULL) {
-        if (collection->id == 0) {
-            hid_report_member_t *tail = base->report_def_start;
-
-            if (tail == NULL) break;
-
-            while (tail->next != NULL) {
-                tail = tail->next;
-            }
-            tail->next = collection->report_def_start;
-
-            hid_id_collection_t *del = collection;
-            collection               = collection->next;
-            base->next               = collection;
-            memset(del, 0, sizeof(*del));
-        } else {
-            base = collection;
-            collection = base->next;
-        }
-    }
+  }
 
   dprintln("New HID is defined");
 
@@ -401,20 +404,18 @@ void print_hid_report_member(hid_report_member_t const *member) {
          "\tUsagePage:%d Usage:%d\n"
          "\tLogicalMin:%d Max:%d\n"
          "\tUsageMin:%d Max:%d\n"
-         "\tPhysicalMin:%d Max:%d\n"
          "}",
          member->global.report_size, member->global.report_count,
          member->global.usage_page, member->local.usage,
          member->global.logical_minimum, member->global.logical_maximum,
-         member->local.usage_minimum, member->local.usage_maximum,
-         member->global.physical_minimum, member->global.physical_maximum
+         member->local.usage_minimum, member->local.usage_maximum
         );
   // clang-format on
 }
 
 void print_collection(hid_id_collection_t const *collection) {
-  dprintf("ID:%d, USAGE_PAGE:%d, USAGE:%d\n", collection->id,
-         collection->usage_page, collection->usage);
+  dprintf("ID:%u, USAGE_PAGE:%u, USAGE:%u\n", collection->id,
+          collection->usage_page, collection->usage);
   hid_report_member_t const *member = collection->report_def_start;
 
   while (member != NULL) {

@@ -30,6 +30,9 @@ void system_report_parser(hid_report_member_t const *member,
                           uint8_t const *data, uint8_t len);
 void consumer_report_parser(hid_report_member_t const *member,
                             uint8_t const *data, uint8_t len);
+__attribute__((weak)) void
+vendor_report_parser(uint16_t usage_page, hid_report_member_t const *member, uint8_t const *data,
+                     uint8_t len);
 
 bool parse_report(uint8_t interface,
                   uint8_t const *report, uint8_t len) {
@@ -80,7 +83,8 @@ bool parse_report(uint8_t interface,
     case 0x0C01:
       func = consumer_report_parser;
     break;
-    default:
+  default:
+    vendor_report_parser(collection->usage_page, member, report, len);
     return false;
     break;
   }
@@ -155,7 +159,7 @@ static int16_t parse_value(hid_report_member_t const *member, uint8_t const *dat
     }
 
     if (member->global.report_size != 1) {
-      if (result & (1 << (member->global.report_size-1))) {
+      if (result & (1 << (member->global.report_size - 1))) {
         result |= ~((1 << member->global.report_size) - 1);
       }
 
@@ -178,11 +182,12 @@ void mouse_report_parser(hid_report_member_t const *member, uint8_t const *data,
     uint32_t usage_id =
         (((uint32_t)member->global.usage_page) << 16) | member->local.usage;
 
+    uint16_t bit_idx_cur = bit_idx;
     int16_t val = parse_value(member, data, &bit_idx);
 
     switch (usage_id) {
-    case 0x00090001: // Pointer, Buttons
-      result.button = val;
+    case 0x00090000 ... 0x00090001: // Pointer, Buttons
+      result.button |= (val << (bit_idx_cur & 0x07));
       break;
 
     case 0x00010030: // Generic, X
