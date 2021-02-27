@@ -195,7 +195,7 @@ void mouse_report_hook(mouse_parse_result_t const* report) {
     // 8 button mouse is assumed
     //
     uint8_t button_prev    = matrix_dest[0];
-    uint8_t button_current = (report->button & 0x1F) | ((report->undefined & 0x7) << 5);
+    uint8_t button_current = report->button;
 
     if (button_current != button_prev) {
         matrix_has_changed = true;
