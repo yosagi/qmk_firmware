@@ -18,6 +18,9 @@
 
 #include "quantum.h"
 
+extern void (*pointing_device_set_button)(uint8_t btn);
+extern void (*pointing_device_clear_button)(uint8_t btn);
+
 /* This is a shortcut to help you visually see your layout.
  *
  * The first section contains all of the arguments representing the physical

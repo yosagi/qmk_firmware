@@ -38,12 +38,12 @@
 static uint8_t pointing_device_button = 0;
 static bool    send_flag              = false;
 
-void pointing_device_set_button(uint8_t btn) {
+void pointing_device_set_button_mtch6102(uint8_t btn) {
     pointing_device_button |= btn;
     send_flag = true;
 }
 
-void pointing_device_clear_button(uint8_t btn) {
+void pointing_device_clear_button_mtch6102(uint8_t btn) {
     pointing_device_button &= ~btn;
     send_flag = true;
 }

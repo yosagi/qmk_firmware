@@ -15,6 +15,7 @@
  */
 #include QMK_KEYBOARD_H
 #include "mtch6102.h"
+#include "iqs5xx.h"
 #include "pointing_device.h"
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -38,7 +39,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     return true;
 }
 void matrix_scan_user() {
-
     // Change cursor movement to scroll movement if layer is 1
     if (layer_state_is(1)) {
         report_mouse_t mouse_rep = pointing_device_get_report();

@@ -23,4 +23,12 @@ BLUETOOTH_ENABLE = no       # Enable Bluetooth
 AUDIO_ENABLE = no           # Audio output
 POINTING_DEVICE_ENABLE = yes
 
-SRC += mtch6102.c i2c_master.c
+SRC += mtch6102.c iqs5xx.c i2c_master.c
+
+TP_TYPE = $(strip $(TP))
+ifeq ($(TP_TYPE), mtch6102)
+  OPT_DEFS += -DTP_TYPE=TP_TYPE_MTCH6102
+endif
+ifeq ($(TP_TYPE), iqs)
+  OPT_DEFS += -DTP_TYPE=TP_TYPE_IQS5XX
+endif
