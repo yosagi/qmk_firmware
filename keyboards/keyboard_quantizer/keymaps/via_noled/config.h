@@ -7,5 +7,3 @@
 #else
 #    define DYNAMIC_KEYMAP_LAYER_COUNT 2
 #endif
-
-#define QUANTIZER_INDICATOR_ENABLE

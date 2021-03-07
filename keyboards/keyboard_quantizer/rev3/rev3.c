@@ -31,9 +31,6 @@ extern USB_ClassInfo_CDC_Device_t cdc_device;
 extern uint8_t                    device_cnt;
 extern uint8_t                    hid_info_cnt;
 
-// LED status sent by host
-uint8_t indicator_led_cmd;
-
 __attribute__((weak)) void virtser_send(const uint8_t byte) {}
 
 static void bootloader_check(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo) {
@@ -56,12 +53,6 @@ void keyboard_post_init_kb_rev(void) {
 #ifdef VIRTSER_ENABLE
     print_set_sendchar(virtser_sendchar);
 #endif
-}
-
-bool led_update_kb(led_t led_state) {
-    indicator_led_cmd = led_state.raw;
-
-    return true;
 }
 
 void send_reset_cmd(void) {
@@ -88,7 +79,34 @@ static void send_bootloader_cmd(void) {
     uart_putchar('b');
     uart_putchar('\n');
 }
-#else
+#endif
+
+#ifdef QUANTIZER_INDICATOR_ENABLE
+// LED status sent by host
+uint8_t indicator_led_cmd;
+
+bool led_update_kb(led_t led_state) {
+    indicator_led_cmd = led_state.raw;
+
+    return true;
+}
+
+__attribute__((weak)) uint8_t update_indicator_led(void) {
+    uint8_t layer_led     = (layer_state >> 1) & 0x07;
+    uint8_t indicator_led = layer_led;
+
+    uint16_t phase = timer_read() % 600;
+    if (phase < 150) {
+        indicator_led &= ~indicator_led_cmd;
+    } else if (phase < 300) {
+        indicator_led |= indicator_led_cmd;
+    } else if (phase < 450) {
+        indicator_led &= ~(indicator_led_cmd & layer_led);
+    }
+
+    return indicator_led;
+}
+
 static void blink_indicator_led(uint8_t led)
 {
     uart_putchar('\n');
@@ -165,22 +183,6 @@ void virtser_recv(const uint8_t ch) {
     }
 }
 
-__attribute__((weak)) uint8_t update_indicator_led(void) {
-    uint8_t layer_led     = (layer_state >> 1) & 0x07;
-    uint8_t indicator_led = layer_led;
-
-    uint16_t phase = timer_read() % 600;
-    if (phase < 150) {
-        indicator_led &= ~indicator_led_cmd;
-    } else if (phase < 300) {
-        indicator_led |= indicator_led_cmd;
-    } else if (phase < 450) {
-        indicator_led &= ~(indicator_led_cmd & layer_led);
-    }
-
-    return indicator_led;
-}
-
 void matrix_scan_kb() {
     if (ch559_update_mode) {
         // pass through received uart data to virtser
@@ -188,7 +190,7 @@ void matrix_scan_kb() {
             virtser_send(uart_getchar());
         }
     } else {
-#ifndef CH559_BOOTLOADER_ENABLE
+#ifdef QUANTIZER_INDICATOR_ENABLE
         blink_indicator_led(update_indicator_led());
 #endif
 
