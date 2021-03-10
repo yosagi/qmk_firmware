@@ -18,10 +18,6 @@ typedef struct {
 __attribute__((weak)) void system_report_hook(uint16_t report) {}
 __attribute__((weak)) void consumer_report_hook(uint16_t report) {}
 
-// default hooks are defined in keyboard_quantizer.c
-void keyboard_report_hook(keyboard_parse_result_t const *report);
-void mouse_report_hook(mouse_parse_result_t const *report);
-
 void keyboard_report_parser(hid_report_member_t const *member,
                             uint8_t const *data, uint8_t len);
 void mouse_report_parser(hid_report_member_t const *member, uint8_t const *data,

@@ -76,9 +76,7 @@ enum {
 
 #define SERIAL_BUFFER_LEN 256
 
-#if QUANTIZER_REPORT_PARSER == REPORT_PARSER_FIXED
-// accept only boot protocol keyboard packet
-static bool report_parser_fixed(uint8_t const* buf, uint8_t msg_len, uint8_t* pre_keyreport, matrix_row_t* current_matrix) {
+bool report_parser_fixed(uint8_t const* buf, uint8_t msg_len, uint8_t* pre_keyreport, matrix_row_t* current_matrix) {
     bool matrix_has_changed = false;
 
     dprintf("Report received\n");
@@ -112,7 +110,6 @@ static bool report_parser_fixed(uint8_t const* buf, uint8_t msg_len, uint8_t* pr
 
     return matrix_has_changed;
 }
-#endif
 
 bool          matrix_has_changed = false;
 matrix_row_t* matrix_dest;
@@ -176,7 +173,7 @@ bool          parse_packet(uint8_t* buf, uint32_t cnt, matrix_row_t* current_mat
 #elif QUANTIZER_REPORT_PARSER == REPORT_PARSER_FIXED
             // no descriptor parser (Fixed)
 #elif QUANTIZER_REPORT_PARSER == REPORT_PARSER_USER
-            parse_report_descriptor(packet_header->dev_type, &packet_header->data_start, packet_header->len);
+            report_descriptor_parser_user(packet_header->dev_type, &packet_header->data_start, packet_header->len);
 #else
 #    error "Unknwon report parser"
 #endif
