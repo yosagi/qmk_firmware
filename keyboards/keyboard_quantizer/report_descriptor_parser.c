@@ -194,10 +194,8 @@ bool parse_report_descriptor(uint8_t interface, uint8_t const *desc,
       if (level == 0) {
         current_collection = find_empty_id_idx_begin();
         if (current_collection == NULL) {
-          dprintln("Error");
-          delete_hid_device(interface);
-
-          return false;
+          dprintln("No empty collection");
+          break;
         } else {
           dprintf("Register to collection 0x%08X\n", current_collection);
         }
@@ -259,8 +257,7 @@ bool parse_report_descriptor(uint8_t interface, uint8_t const *desc,
 
       if (usage_table_idx >= LEN(usage_table)) {
         dprintln("Error");
-        delete_hid_device(interface);
-        return false;
+        break;
       }
 
       if (level == 0) {
@@ -319,10 +316,7 @@ bool parse_report_descriptor(uint8_t interface, uint8_t const *desc,
 
         if (new_member == NULL) {
           dprintln("No empty table");
-          delete_hid_device(interface);
-
-          return false;
-
+          break;
         } else {
           dprintf("Register to report table 0x%04X\n", new_member);
         }
