@@ -55,7 +55,7 @@ bool thinkpad_trakpoint_keyboard_parser(uint8_t const* buf, uint16_t len, matrix
     } else if (buf[DEV_NUM] == 1) {
         // Interface 1 is trackpoint report
         if (buf[REPORT_START] == 1) {
-            // Report ID0 is mouse report
+            // Report ID1 is mouse report
             mouse_parse_result_t mouse = {0};
             mouse.button               = buf[REPORT_START + 1];
             mouse.x                    = buf[REPORT_START + 2];
@@ -65,7 +65,7 @@ bool thinkpad_trakpoint_keyboard_parser(uint8_t const* buf, uint16_t len, matrix
             // mouse.h                    = buf[REPORT_START + 5];
             mouse_report_hook(&mouse);
         } else if (buf[REPORT_START] == 0x16) {
-            // Report ID1 is Hscroll report
+            // Report ID22 is Hscroll report
             mouse_parse_result_t mouse = {0};
             mouse.h                    = buf[REPORT_START + 1];
             mouse_report_hook(&mouse);
