@@ -49,7 +49,7 @@ typedef struct {
 
 #define HID_DEVICE_COUNT 8
 #define HID_ID_COLLECTION_COUNT 8
-#define HID_REPORT_MEMBER_COUNT 16
+#define HID_REPORT_MEMBER_COUNT 16*2
 #define HID_USAGE_COUNT 16
 
 bool parse_report_descriptor(uint8_t interface,

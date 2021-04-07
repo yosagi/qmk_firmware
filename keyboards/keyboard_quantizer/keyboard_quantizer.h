@@ -57,6 +57,12 @@ void on_disconnect_device_user(uint8_t device);
 bool process_packet(matrix_row_t current_matrix[]);
 void send_reset_cmd(void);
 
+/* Extra matrix rows for handling consumer usage page keys*/
+#define MATRIX_CONSUMER_ROWS 2
+#define CONSUMER_ROWS \
+    { KC_AUDIO_MUTE,    KC_AUDIO_VOL_UP,    KC_AUDIO_VOL_DOWN, KC_MEDIA_NEXT_TRACK, KC_MEDIA_PREV_TRACK, KC_MEDIA_STOP, KC_MEDIA_PLAY_PAUSE, KC_MEDIA_EJECT}, \
+    { KC_BRIGHTNESS_UP, KC_BRIGHTNESS_DOWN, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO}, \
+
 /* This is a shortcut to help you visually see your layout.
  *
  * The first section contains all of the arguments representing the physical
@@ -94,5 +100,6 @@ lctrl, lgui, lalt, mhen, spc, henk, kana, ralt, rgui, app, rctrl,        left, d
     { KC_LANG1, KC_LANG2, KC_LANG3, KC_LANG4, KC_LANG5, KC_LANG6, KC_LANG7, KC_LANG8} ,\
     { KC_LANG9, KC_ALT_ERASE, KC_SYSREQ, KC_CANCEL, KC_CLEAR, KC_PRIOR, KC_RETURN, KC_SEPARATOR} , \
     { KC_OUT,  KC_OPER, KC_CLEAR_AGAIN, KC_CRSEL, KC_EXSEL, KC_NO, KC_NO, KC_NO} ,\
+    CONSUMER_ROWS \
     { lctrl, lsft, lalt, lgui, rctrl, rsft, ralt, rgui } \
 }

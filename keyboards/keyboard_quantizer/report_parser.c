@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 #include "print.h"
+#include "debug.h"
 
 #define LEN(x) (sizeof(x) / sizeof(x[0]))
 
@@ -226,11 +227,43 @@ void system_report_parser(hid_report_member_t const *member,
 
 void consumer_report_parser(hid_report_member_t const *member,
                             uint8_t const *data, uint8_t len) {
-  uint16_t result;
+  uint16_t result = 0;
   uint16_t bit_idx = 0;
 
-  if (member != NULL) {
-    result = parse_value(member, data, &bit_idx);
-    consumer_report_hook(result);
+  while(member){
+      if (member->global.report_size == 1) {
+          if(member->local.usage_maximum==0){
+            for(int idx=0;idx < member->global.report_count && member!=NULL ; ++idx) {
+                //dprintf("member=0x%X  bit_idx=0x%X data=0x%X\n",member,bit_idx,*data);
+                if (*data & (1 << (bit_idx & 0x07))) {
+                    result=member->local.usage;
+                    //dprintf("consumer_report_parser result=0x%X\n",result);
+                    consumer_report_hook(result);
+                    return;
+                }
+                bit_idx++;
+                member=member->next;
+                if ((bit_idx & 0x7) == 0) {
+                    data++;
+                    len--;
+                }
+            }
+          }else{
+              for(int idx=0;idx < member->global.report_count && member!=NULL ; ++idx) {
+                  if (*data & (1 << (bit_idx & 0x07))) {
+                      result=member->local.usage_minimum + bit_idx;
+                      consumer_report_hook(result);
+                      return;
+                  }
+                  bit_idx++;
+                  if ((bit_idx & 0x7) == 0) {
+                      data++;
+                      len--;
+                  }
+              }
+              member=member->next;
+          }
+      }
   }
+  consumer_report_hook(0);
 }

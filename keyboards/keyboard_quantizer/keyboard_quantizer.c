@@ -24,6 +24,7 @@
 #include "uart.h"
 #include "quantum.h"
 #include "pointing_device.h"
+#include "report.h"
 
 #ifndef QUANTIZER_REPORT_PARSER
 #    define QUANTIZER_REPORT_PARSER REPORT_PARSER_DEFAULT
@@ -37,12 +38,23 @@ bool    ch559_start  = false;
 uint8_t device_cnt   = 0;
 uint8_t hid_info_cnt = 0;
 
+uint16_t consumer_code_table[MATRIX_CONSUMER_ROWS
+][8];
+
 __attribute__((weak)) void keyboard_post_init_kb_rev(void) {}
 
 void keyboard_post_init_kb() {
     // debug_enable   = true;
     // debug_keyboard = true;
     keyboard_post_init_kb_rev();
+
+    // initialize consumer_code_table
+    int8_t consumer_keys[MATRIX_CONSUMER_ROWS][MATRIX_COLS]={CONSUMER_ROWS};
+    for (int r=0;r<MATRIX_CONSUMER_ROWS;++r) {
+        for (int c=0;c<MATRIX_COLS;++c) {
+            consumer_code_table[r][c]=KEYCODE2CONSUMER(consumer_keys[r][c]);
+        }
+    }
 }
 
 enum {
@@ -259,7 +271,19 @@ void vendor_report_parser(uint16_t usage_id, hid_report_member_t const *member, 
 }
 
 void system_report_hook(uint16_t report) { dprintf("System report %d\n", report); }
-void consumer_report_hook(uint16_t report) { dprintf("Consumer report %d\n", report); }
+void consumer_report_hook(uint16_t report) {
+    dprintf("Consumer report %X\n", report); 
+    int row=MATRIX_ROWS-MATRIX_CONSUMER_ROWS-1;
+    for (int r = 0 ; r < MATRIX_CONSUMER_ROWS; r++, row++){
+        matrix_dest[row]=0;
+        for (int column = 0; report!=0 && column < MATRIX_COLS; column++) {
+            if(consumer_code_table[r][column]==report){
+                matrix_dest[row] = 1<<column;
+            }
+        }
+    }
+    matrix_has_changed=true;
+}
 
 bool process_packet(matrix_row_t current_matrix[]) {
     bool matrix_has_changed = false;

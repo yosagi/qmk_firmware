@@ -25,10 +25,18 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = { };
 // Override to avoid messy initial keymap show on VIA
 // Patch to dynamic_keymap.c is required
 void dynamic_keymap_reset(void) {
+    const uint8_t consumer_rows[MATRIX_CONSUMER_ROWS][MATRIX_COLS] = { CONSUMER_ROWS };
+
     for (int layer = 0; layer < DYNAMIC_KEYMAP_LAYER_COUNT; layer++) {
-        for (int row = 0; row < MATRIX_ROWS - 1; row++) {
+        int row = 0;
+        for (; row < MATRIX_ROWS - MATRIX_CONSUMER_ROWS -1 ; row++) {
             for (int column = 0; column < MATRIX_COLS; column++) {
                 dynamic_keymap_set_keycode(layer, row, column, row * MATRIX_COLS + column);
+            }
+        }
+        for (int r = 0 ; r < MATRIX_CONSUMER_ROWS; r++, row++){
+            for (int column = 0; column < MATRIX_COLS; column++) {
+                dynamic_keymap_set_keycode(layer, row, column, consumer_rows[r][column]);
             }
         }
         for (int column = 0; column < MATRIX_COLS; column++) {
